@@ -36,50 +36,45 @@ export default {
         }
     },
 
-    mounted(){
-        this.generate_data_controller()
-    },
     methods:{
-        test(){
-        },
         //获取控制面板所用的数据
-        generate_data_controller(){
-            d3.json('static/faker_links（序列）.json',(links)=>{
-                d3.json('static/faker_nodes（序列）.json',(nodes)=>{
-                    this.nodes = nodes
-                    this.links = links
-                    //ip -> index
-                    let ht = {};for(let i = 0;i < nodes.length; i ++)ht[nodes[i]['id']] = i
-                    for(let node of this.nodes){
-                        node['time'] = 0        //通信天数
-                        node['exist_days'] = []
-                    }
+        generate_data_controller(nodes,links){
 
-                    //计算每个点的通信天数
-                    for(let link of this.links){
-                        let source = link.source, target = link.target
-                        let source_idx = ht[source], target_idx = ht[target]
-                        this.nodes[source_idx].exist_days.push(link.time)
-                        this.nodes[target_idx].exist_days.push(link.time) 
-                    }
-                    let min_time = this.links.length,max_time = -1
-                    for(let node of this.nodes){
-                        let time = new Set(node.exist_days).size
-                        node.time = time
-                        min_time = Math.min(min_time,time);
-                        max_time = Math.max(max_time,time)
-                    }
+                nodes = JSON.parse(JSON.stringify(nodes))
+                links = JSON.parse(JSON.stringify(links))
+                this.nodes = nodes;
+                this.links = links;
+                //ip -> index
+                let ht = {};for(let i = 0;i < nodes.length; i ++)ht[nodes[i]['id']] = i
+                for(let node of this.nodes){
+                    node['time'] = 0        //通信天数
+                    node['exist_days'] = []
+                }
 
-                    //计算每个点的权值
-                    let maxWeight = Math.max(...this.nodes.map(v=>v.weight))
-                    let minWeight = Math.min(...this.nodes.map(v=>v.weight))
+                //计算每个点的通信天数
+                for(let link of this.links){
+                    let source = link.source, target = link.target
+                    let source_idx = ht[source], target_idx = ht[target];
+                    if(source_idx === undefined || target_idx === undefined)continue;
+                    this.nodes[source_idx].exist_days.push(link.time)
+                    this.nodes[target_idx].exist_days.push(link.time) 
+                }
+                let min_time = this.links.length,max_time = -1
+                for(let node of this.nodes){
+                    let time = new Set(node.exist_days).size
+                    node.time = time
+                    min_time = Math.min(min_time,time);
+                    max_time = Math.max(max_time,time)
+                }
 
-                    this.max_time = max_time;
-                    this.max_weight = maxWeight;
-                    this.min_weight = minWeight;
-                    this.drawController(this.nodes,min_time,max_time)
-                })
-            })
+                //计算每个点的权值
+                let maxWeight = Math.max(...this.nodes.map(v=>v.weight))
+                let minWeight = Math.min(...this.nodes.map(v=>v.weight))
+
+                this.max_time = max_time;
+                this.max_weight = maxWeight;
+                this.min_weight = minWeight;
+                this.drawController(this.nodes,min_time,max_time)
         },
         drawController(data,min_time,max_time){
 
@@ -192,7 +187,7 @@ export default {
             
 
             //权值ticks
-            let weight_ticks = weight_scale.ticks(10) //每个tick对应一个矩形的左下角
+            let weight_ticks = weight_scale.ticks(5) //每个tick对应一个矩形的左下角
             let weight_tick_interval = weight_ticks[1] - weight_ticks[0]
             while(weight_ticks[0] > this.min_weight){ //解决ticks不完全包括weight范围的问题 - 左侧 
                 weight_ticks.unshift(weight_ticks[0] - weight_tick_interval)
@@ -314,7 +309,7 @@ export default {
             }
             for(let link of links){
                 let source = link.source,target = link.target
-                if(ht[source] === 1 && ht[target] === 1)links_selected.push(link)
+                if(ht[source] === 1 || ht[target] === 1)links_selected.push(link)
             }
             this.$emit('drawSeq',links_selected,nodes_selected)
         },

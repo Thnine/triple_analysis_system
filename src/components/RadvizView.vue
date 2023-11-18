@@ -119,6 +119,11 @@ export default {
             net_filter_data:[],
             seq_filter_data:[],
 
+            //全局搜索高亮
+            globalSearchIds:[],//全局搜索列表中的Id
+            drawGlobalSearchIdsHighLight:()=>{return;},//在Sketch中高亮全局搜索节点的Id
+
+
         }
     },
     mounted(){
@@ -635,12 +640,12 @@ export default {
                     return 0.7;
                 })
 
-            points.on("mouseover", function (e,d) {
+            
+
+            points
+            .on("mouseover", function (e,d) {
                 let selection = vue_this.svg.selectAll('.points').nodes()
                 let i = selection.indexOf(this)
-
-
-                console.log(vue_this.print(i))
 
                 vue_this.InfoPanelVisible = true;//显示
                 vue_this.$refs['infoPanel'].setMessageData(vue_this.print(i));//更新信息
@@ -668,6 +673,27 @@ export default {
             .attr("transform", function (d) {
                 return "translate(" + d.coordinateX() + "," + d.coordinateY() + ")"
             })
+
+            //全局搜索节点突出显示的高亮节点
+            vue_this.drawGlobalSearchIdsHighLight = ()=>{
+                points.each(function(d){
+                    let selection = vue_this.svg.selectAll('.points').nodes()
+                    let i = selection.indexOf(this)
+
+                    let id = vue_this.newData[i].node;
+                    if(vue_this.globalSearchIds.indexOf(id) != -1){
+                        console.log('ok')
+                        d3.select(this).classed('radviz-global-highlight',true)
+                    }
+                    else{
+                        d3.select(this).classed('radviz-global-highlight',false)
+                    }
+
+                })
+            }
+            vue_this.drawGlobalSearchIdsHighLight();
+
+
         },
         drawColorRect:function(){
             let vue_this = this
@@ -832,7 +858,15 @@ export default {
         },
         exportSeleted:function(){
             this.$emit('radar_selected_nodes',this.lasso_ids)
-        }
+        },
+
+        //外部接口
+        highlightGlobalSearchNodes(ids){//根据传入的全局搜索节点，高亮对应的点
+            const self = this;
+            self.globalSearchIds = JSON.parse(JSON.stringify(ids))
+            self.drawGlobalSearchIdsHighLight();
+        },
+
     },   
 }
 </script>
@@ -855,6 +889,10 @@ export default {
 
 }
 
+/deep/ .radviz-global-highlight{
+    stroke: #ff9900;
+    stroke-width: 4px;
+}
 
 
 </style>

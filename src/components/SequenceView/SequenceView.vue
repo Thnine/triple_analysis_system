@@ -51,9 +51,13 @@ export default {
             maxTime:0,//最大时间（时间戳）
             minTime:0,//最小时间（时间戳）
             timeInterval:0,//时间间隔（ms）
-            //其他项
+            //接口项
             highlightList:[],//要高亮的节点id数组
             drawHightLight:()=>{return;},//高亮的重绘函数
+            globalSearchIds:[],//全局搜索列表中的Id
+            drawGlobalSearchIdsHighLightInSketch:()=>{return;},//在Sketch中高亮全局搜索节点的Id
+            drawGlobalSearchIdsHighLightInMain:()=>{return;},//在Main中高亮全局搜索节点的Id
+
         }
     },
     methods:{
@@ -65,30 +69,28 @@ export default {
             for(let item of nodes){
                 nodeMap[item['id']]=cnt++
             }
-            let mat = new Array(node_num).fill(1).map(() => new Array(timePatches).fill(1));
+            let mat = new Array(node_num).fill(0).map(() => new Array(timePatches).fill(0.001 * Math.random()));
 
             for(let l of links){
                 let source = nodeMap[l['source']], target = nodeMap[l['target']], time = Date.parse(l['time'])
                 let timeIndex = (time - self.minTime)/timeInterval
-                mat[source][timeIndex]++;
-                mat[target][timeIndex]++;
+                if(source !== undefined)
+                    mat[source][timeIndex]++;
+                if(target !== undefined)
+                    mat[target][timeIndex]++;
             }
-            let resMat;
-            try{
-                resMat = await WCluster.PCA(mat, { nCompNIPALS: 1 })
-                let tmp = 0
-                for(let i=0;i<resMat.length;i++){
-                    resMat[i].push(tmp++)
-                }
-                resMat = resMat.sort((a,b)=>(a[0]-b[0]))
-                let sorted_nodes = []
-                for(let i=0;i<resMat.length;i++){
-                    sorted_nodes.push(self.nodes[resMat[i][1]])
-                }
-                return sorted_nodes;
-            }catch(err){
-                return self.nodes
+            let resMat = await WCluster.PCA(mat, { nCompNIPALS: 1 })
+            let tmp = 0
+            for(let i=0;i<resMat.length;i++){
+                resMat[i].push(tmp++)
             }
+            resMat = resMat.sort((a,b)=>(b[0]-a[0]))
+            let sorted_nodes = []
+            for(let i=0;i<resMat.length;i++){
+                sorted_nodes.push(self.nodes[resMat[i][1]])
+            }
+            return sorted_nodes;
+
         },
 
         async start(nodes,links,timeInterval=undefined){ 
@@ -105,13 +107,14 @@ export default {
             self.timeInterval = 0;
             self.drawHightLight = ()=>{return;}
             self.highlightList = [];
+            self.drawGlobalSearchIdsHighLightInSketch = ()=>{return;}
+            self.drawGlobalSearchIdsHighLightInMain = ()=>{return;}
 
 
             self.links = JSON.parse(JSON.stringify(links))
             self.nodes = JSON.parse(JSON.stringify(nodes))
 
 
-            console.log('nodes:',self.nodes)
 
             //计算时间相关数据
             let timeSet = new Set();//提取时间
@@ -148,8 +151,10 @@ export default {
                 }
             }
             for(let l of self.links){
-                SketchDataMap[l['source']].value++;
-                SketchDataMap[l['target']].value++;
+                if(SketchDataMap[l['source']] !== undefined)
+                    SketchDataMap[l['source']].value++;
+                if(SketchDataMap[l['target']] !== undefined)
+                    SketchDataMap[l['target']].value++;
             }
             for(let n of self.nodes){
                 SketchData.push(SketchDataMap[n.id])
@@ -198,11 +203,25 @@ export default {
                     .attr('width',unitWidth)
                     .attr('height',unitHeight)
                     .attr('fill',d=>colorScale(d.value))
+
+            //全局搜索节点的高亮函数（sketch）
+            self.drawGlobalSearchIdsHighLightInSketch = ()=>{
+                rects.each(function(d,i){
+                    if(self.globalSearchIds.indexOf(d.id) != -1){
+                        d3.select(this).attr('stroke','#ff9900').attr('stroke-width',2)
+                    }
+                    else{
+                        d3.select(this).attr('stroke',null).attr('stroke-width',null)
+                    }
+                })
+            }
+            self.drawGlobalSearchIdsHighLightInSketch();
+
+
             //绑定brush
             const brush = d3.brushY()
                             .extent([[self.sketchPadding.left,self.sketchPadding.top],[width-self.sketchPadding.right,height - self.sketchPadding.bottom]])
                             .on("end",()=>{
-                                console.log("brush")
                                 if(d3.event.selection===null)
                                     return;
                                 //求取刷选索引
@@ -242,7 +261,9 @@ export default {
         },
 
         drawMainPlot(data){
-            console.log(data)
+
+            console.log('main-data',data)
+
             const self = this;
             const mainSVG = d3.select(self.$refs['SequenceView-main-canvas'])
 
@@ -277,10 +298,10 @@ export default {
                                  .domain([0, maxValue])
                                  .range([self.minMainColor, self.maxMainColor])
 
-
             const mainPlot = mainSVG.append('g')
             const highlightPlot = mainSVG.append('g')
             const timeAxisPlot = mainSVG.append('g')
+            const globalSearchHighLightPlot = mainSVG.append('g')
             const brushPlot = mainSVG.append('g')
 
 
@@ -290,6 +311,7 @@ export default {
                 .data(data)
                 .enter()
                 .append('g')
+                .classed('seq-main-row',true)
                 .attr('transform',(d,i)=>`translate(${0},${self.mainPadding.top + i * unitHeight})`)
                 .selectAll('*')
                 .data(d=>d['value'])
@@ -322,6 +344,26 @@ export default {
                 }
             }
             self.drawHightLight();
+
+            //全局搜索节点的高亮函数（main）
+            self.drawGlobalSearchIdsHighLightInMain = ()=>{
+                globalSearchHighLightPlot.selectAll('*').remove();//清空
+                mainPlot.selectAll('.seq-main-row').each(function(d,i){
+                    if(self.globalSearchIds.indexOf(d.id) != -1){
+                        globalSearchHighLightPlot.append('rect')
+                                             .attr('x',0)
+                                             .attr('y',0)
+                                             .attr('transform',(d)=>`translate(${self.mainPadding.left + self.highlightWidth},${self.mainPadding.top + i * unitHeight})`)
+                                             .attr('width',mainPlotwidth)
+                                             .attr('height',unitHeight)
+                                             .attr('fill-opacity',0)
+                                             .attr('stroke','#ff9900')
+                                             .attr('stroke-width',2)
+                    }
+                })
+            }
+            self.drawGlobalSearchIdsHighLightInMain();
+
 
             //绘制坐标轴 TODO 这个是写死的
             for(let i = 0;i < timeList.length;i++){
@@ -393,10 +435,17 @@ export default {
          */
         setHighlight(ids){
             const self = this;
-
             self.highlightList = JSON.parse(JSON.stringify(ids))
             self.drawHightLight();
         },
+
+        highlightGlobalSearchNodes(ids){//根据传入的全局搜索节点，高亮对应的点
+            const self = this;
+            self.globalSearchIds = JSON.parse(JSON.stringify(ids))
+            self.drawGlobalSearchIdsHighLightInSketch();
+            self.drawGlobalSearchIdsHighLightInMain();
+        },
+
 
         /**
          * 向外接口

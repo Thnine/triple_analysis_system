@@ -183,7 +183,6 @@ export default {
       let corr = []
       let type_list = this.getTypeList(data)
 
-      console.log('this_type:',type_select)
 
       for (var t = 1; t < strTimeList.length; ++t) { //从1开始
         
@@ -223,10 +222,6 @@ export default {
           var correlationHops = correlationIn - correlationOut > 0 ? (correlationIn - correlationOut) : (-(correlationIn - correlationOut));
           corr.push({"column": time_slot, "column_x": time_slot, "column_y": type_name, "correlationIn": correlationIn, "correlationOut": correlationOut, "correlationHops": correlationHops, "row": row})
         }
-
-        // console.log(`时间${t}的总迁入为：${sumIn}`)
-        // console.log(`时间${t}的总迁出为：${sumOut}`)
-        console.log(`时间${t}的总变动为：${sumIn - sumOut}`)
 
       }
       return corr
@@ -322,7 +317,6 @@ export default {
 
       let corr = this.getInOutHopsDataForType(data, type_select)
       
-      console.log('corr:',corr)
 
       var extent = [
         d3.min(
@@ -445,7 +439,7 @@ export default {
 
       
       //计算最大半径
-      let maxRadius = y.step() * 0.5;
+      let maxRadius = Math.min(y.step() * 0.5, x.step() * 0.5)
       let maxCount = 0;
       for(let attr of this.attr_keys){
         let tempCorr = this.getInOutHopsDataForType(data, attr)
@@ -493,7 +487,7 @@ export default {
         .append("circle")
         .attr("r", function (d) {
           // return w(d.correlationHops) * 0.05
-          return (1.0 * d.correlationHops / maxCount * maxRadius) * 0.7
+          return (1.0 * d.correlationHops / maxCount * maxRadius) * 0.5
         })
         .attr("fill", hopColor[2])
         // .attr('stroke','white')

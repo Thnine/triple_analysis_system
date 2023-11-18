@@ -35,6 +35,10 @@ export default {
 
   methods:{
     setMessageData(message){
+      // message = {
+      //   'a':'asa',
+      //   'b':'vvv'
+      // }
       this.messageData.length = 0;
       for(let key in message){
         this.messageData.push([key,message[key]])

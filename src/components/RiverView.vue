@@ -54,7 +54,8 @@ export default {
           attr_keys:[],
           maxTime:0,//最大时间
           minTime:0,//最小时间
-          timeSortedArray:[]//排序后的时间列表
+          timeSortedArray:[],//排序后的时间列表
+          timeInterval:0
         }
     },
     methods:{
@@ -96,9 +97,20 @@ export default {
             for(let v of self.rawData){
                 timeSet.add(Date.parse(v['time']))
             }
-            self.timeSortedArray = Array.from(timeSet).sort((a,b)=>a-b)
-            self.minTime = self.timeSortedArray[0]//最小时间
-            self.maxTime = self.timeSortedArray[self.timeSortedArray.length-1]//最大时间
+            let timeSortedArray = Array.from(timeSet).sort((a,b)=>a-b)
+            let timeInterval = Infinity;
+            for(let i = 1;i < timeSortedArray.length;i++){
+              if(timeInterval > timeSortedArray[i] - timeSortedArray[i-1]){
+                timeInterval = timeSortedArray[i] - timeSortedArray[i-1]
+              }
+            }
+            self.minTime = timeSortedArray[0]//最小时间
+            self.maxTime = timeSortedArray[timeSortedArray.length-1]//最大时间
+            self.timeInterval = timeInterval
+            self.timeSortedArray = [];
+            for(let t = self.minTime;t <= self.maxTime;t+=self.timeInterval){
+              self.timeSortedArray.push(t)
+            }
             //生成绘图数据
             let drawData = {}
             for(let attr of self.attr_keys){//初始化
@@ -261,17 +273,41 @@ export default {
                    let date = new Date(self.timeSortedArray[self.timeSortedArray.length-1])
                    return date.getFullYear() + '-' + formatNumber(date.getMonth()+1) + '-' + formatNumber(date.getDate()) + ' ' + formatNumber(date.getHours()) + ':' + formatNumber(date.getMinutes()) + ':' + formatNumber(date.getSeconds()) 
                })
-
-              
             
+            //刷选时间交互
+            const brushPlot = svg.append('g')
+            const brush = d3.brushX()
+                            .extent([[self.padding.left,self.padding.top],[self.padding.left + width,self.padding.top + height]])
+                            .on("end",()=>{
+                                if(d3.event.selection === null){
+                                  this.exportBrushTimeRange(null)
+                                }
+                                else{
+                                  let brushLeft = d3.event.selection[0] - self.padding.left
+                                  let brushRight = d3.event.selection[1] - self.padding.left
+                                  let leftTimeStamp = xScale.invert(brushLeft)
+                                  let rightTimeStamp = xScale.invert(brushRight)
+                                  this.exportBrushTimeRange([leftTimeStamp,rightTimeStamp]);
+                                }
+
+                              
+                            })
+            brushPlot.call(brush)
 
 
         },
 
+        
         exportSelectedRiver(type){ //导出被选择的River
           const self = this;
           self.$emit('exportSelectedRiver',type)
         },
+
+        exportBrushTimeRange(timeRange){//导出刷选的时间范围(timeStamp)
+          const self = this;
+          self.$emit('exportBrushTimeRange',timeRange)
+        }
+
     },
 
 }

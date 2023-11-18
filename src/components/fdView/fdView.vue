@@ -1,16 +1,29 @@
 <template>
     <div style="position:relative">
         <div style="position:absolute;right:20px;top:25px;">
+
+
             数据集:
             <el-select v-model="filterFlag" @change="handleFilterFlagChange" size="mini" style="margin-right:20px;width:150px;">
                 <el-option :label="'全部数据'" :value="'all'"/>
                 <el-option :label="'行为序列筛选'" :value="'filter'"/>
             </el-select>
+
+            <el-switch
+                v-model="timeFilterFlag"
+                active-text="时间过滤"
+                @change="handleTimeFilterFlagChange"
+                style="margin-right:20px;">
+            </el-switch>
+
             <el-radio-group v-model="mouseMode" @input="swithMouseMode()" size="mini">
                 <el-radio-button label="放缩"></el-radio-button>
                 <el-radio-button label="圈选"></el-radio-button>
             </el-radio-group>
         </div>
+        <!--悬浮信息版-->
+        <InfoPanel :style="InfoPanelStyle" v-show="InfoPanelVisible" ref="infoPanel"/>
+
         <svg ref="fdView-canvas" style="height:100%;width:100%"></svg>
     </div>
 </template>
@@ -21,7 +34,8 @@
 import * as d3 from 'd3'
 import Vue from 'vue'
 import lasso from "./d3-lasso"
-import {Select,Option,RadioGroup,RadioButton} from 'element-ui';
+import InfoPanel from "../InfoPanel.vue";
+import {Select,Option,RadioGroup,RadioButton,Switch} from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 
 
@@ -29,17 +43,22 @@ Vue.component(Select.name,Select)
 Vue.component(Option.name,Option)
 Vue.component(RadioGroup.name,RadioGroup)
 Vue.component(RadioButton.name,RadioButton)
-
+Vue.component(Switch.name,Switch)
 
 export default {
     name:'fdView',
+    components:{
+        InfoPanel
+    },
     data(){
         return {
             //数据项
             nodes:[],//完整的节点数据
             links:[],//完整的边数据
             filter:[],//过滤器
+            timeFilter:[0,Infinity],//时间过滤器
             highlightIds:[],//高亮的节点id
+            globalSearchIds:[],//全局搜索列表中的Id
             nodes_color:{//节点颜色
 
             },
@@ -62,10 +81,18 @@ export default {
 
             //其他项
             filterFlag:'all',
+            timeFilterFlag:true,//是否启用按照时间过滤的模式
             mouseMode:'放缩',
             zoom:null,
             lasso:null,
             swithMouseMode:()=>{return 1},
+
+            //悬浮信息板相关
+            InfoPanelVisible:false,
+            InfoPanelStyle:{
+                top:'0px',
+                left:'0px'
+            },//信息版的动态style
             
         }
     },
@@ -111,7 +138,7 @@ export default {
             //生成绘图数据以及过滤
             let nodes = JSON.parse(JSON.stringify(self.nodes))
             let links = JSON.parse(JSON.stringify(self.links))
-            if(self.filterFlag == 'filter' && self.filter.length > 0){//按照过滤器过滤
+            if(self.filterFlag == 'filter' && self.filter.length > 0){//filter过滤
                 let new_nodesSet = new Set()
                 let new_links = []
                 for(let i = 0;i < nodes.length;i++){
@@ -129,16 +156,37 @@ export default {
                         new_nodesSet.add(target);
                     }
                 }
-                let new_nodes = Array.from(new_nodesSet).map(v=>{
-                    return {
-                        'id':v
-                    }
+                let new_nodes = nodes.filter((v)=>{
+                    return new_nodesSet.has(v.id)
                 })
 
                 nodes = new_nodes;
                 links = new_links
             }   
+            if(self.timeFilterFlag){//timeFilter过滤
+                let new_links = links.filter((link)=>{//new links
+                    let timestamp = Date.parse(link.time)
+                    if(timestamp >= self.timeFilter[0] && timestamp <= self.timeFilter[1]){
+                        return true
+                    }
+                    else{
+                        return false
+                    }
+                })
+                let new_nodesSet = new Set() 
+                for(let i = 0;i < new_links.length;i++){
+                    let source = new_links[i].source;
+                    let target = new_links[i].target;
+                    new_nodesSet.add(source);
+                    new_nodesSet.add(target);
+                }
+                let new_nodes = nodes.filter((v)=>{
+                    return new_nodesSet.has(v.id)
+                })
 
+                links = new_links;
+                nodes = new_nodes
+            }
 
             let simulation = d3.forceSimulation()
                                 .nodes(nodes)
@@ -222,6 +270,12 @@ export default {
                                 .attr('r',self.nodeSize)
                                 .attr('cx',d=>xScale(d.x))
                                 .attr('cy',d=>yScale(d.y))
+                                .classed('fdView_global_highlight',(d)=>{
+                                    if(self.globalSearchIds.indexOf(d.id) != -1){
+                                        return true
+                                    }
+                                    return false;
+                                })
                                 .classed('fdView_highlight',(d)=>{
                                     if(self.highlightIds.indexOf(d.id) != -1){
                                         return true
@@ -229,17 +283,51 @@ export default {
                                     return false;
                                 })
                                 .attr('fill',(d)=>{
-                                    if(self.filterFlag == 'filter' && self.filter.indexOf(d.id) == -1)
-                                        return self.nodeExcludeColor;
+                                    if(self.filterFlag == 'filter'){//处于过滤模式
+                                        if(self.nodes_color[d.id] == '#b51c1c')
+                                            return '#b51c1c'
+                                        if(self.filter.indexOf(d.id) != -1){
+                                            if(self.nodes_color[d.id] === undefined){
+                                                return self.baseNodeColor
+                                            }
+                                            else{
+                                                return self.nodes_color[d.id]
+                                            }
+                                        }
+                                        else{
+                                            return self.nodeExcludeColor;
+                                        }
+                                    }
                                     else{
                                         if(self.nodes_color[d.id] === undefined){
                                             return self.baseNodeColor;
                                         }
                                         else{
-                                            return self.nodes_color[d.id];
+                                            return self.nodes_color[d.id]
                                         }
-                                    }
-                                        
+                                    }    
+                                })
+                                .on('mouseover',(d,i)=>{
+
+                                    let messageData = {};
+                                    //id
+                                    messageData['ID'] = d.id
+                                    //类型
+                                    messageData['类型'] = d['is_ship']?'船':'岸'
+                                    //权重
+                                    messageData['权重'] = d['weight']
+
+                                    self.InfoPanelVisible = true;//显示
+                                    self.$refs['infoPanel'].setMessageData(messageData);//更新信息
+                                    /**
+                                     * 更新位置
+                                     */
+                                    self.InfoPanelStyle['top'] = `${d3.event.offsetY + 10}px`
+                                    self.InfoPanelStyle['left'] = `${d3.event.offsetX + 10}px`
+
+                                })
+                                .on('mouseout',(d,i)=>{
+                                    self.InfoPanelVisible = false;//显示
                                 })
             
 
@@ -336,9 +424,36 @@ export default {
 
         },
 
+        highlightGlobalSearchNodes(ids){//根据传入的全局搜索节点，高亮对应的点
+            const self = this;
+            
+            self.globalSearchIds = ids;
+
+            const svg =  d3.select(self.$refs['fdView-canvas'])
+            const scatterPlot = svg.selectAll('.fdView-scatter');
+
+            scatterPlot.classed('fdView_global_highlight',(d)=>{
+                if(self.globalSearchIds.indexOf(d.id) != -1)
+                    return true
+                else
+                    return false
+            })
+
+        },
+
         setFilter(ids){//传入过滤id数组
             const self = this;
             self.filter = JSON.parse(JSON.stringify(ids));
+            self.draw();
+        },
+        setTimeFilter(timeRange){//传入过滤的时间范围
+            const self = this;
+            if(timeRange === null){
+                self.timeFilter = [0,Infinity]
+            }
+            else{
+                self.timeFilter = JSON.parse(JSON.stringify(timeRange));
+            }
             self.draw();
         },
 
@@ -349,6 +464,11 @@ export default {
         handleFilterFlagChange(val){
             const self = this;
             self.draw();
+        },
+        handleTimeFilterFlagChange(){
+            const self = this;
+            self.draw();
+
         }
 
     },
@@ -363,12 +483,18 @@ export default {
     stroke-width: 2px;
   }
 
+
+
+
   .fdView_highlight{
-    stroke: #ff9900;
-    stroke-width: 2px;
+    stroke: rgb(95, 95, 95);
+    stroke-width: 4px;
   }
 
-
+  .fdView_global_highlight{
+    stroke: #ff9900;
+    stroke-width: 4px;
+  }
   .lasso path{
     fill-opacity: 0.6;
     stroke: #3c78d8;
