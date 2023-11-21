@@ -1,7 +1,7 @@
 <template>
     <div class="radviz-view">
 
-        <div style="display:flex;position:absolute;right:20px;top:25px;">
+        <div style="display:flex;position:absolute;right:20px;top:25px;align-items:center;">
             数据集：
             <el-select size="mini" style="width: 170px;margin-right:20px;" v-model="value" placeholder="请选择">
                     <el-option
@@ -11,6 +11,12 @@
                     :value="item.value">
                     </el-option>
             </el-select>
+            <el-switch
+                v-model="timeFilterFlag"
+                active-text="时间过滤"
+                @change="handleTimeFilterFlagChange"
+                style="margin-right:20px;">
+            </el-switch>
             <el-button size="mini" type="primary" @click="exportSeleted">圈选导出</el-button>
         </div>
 
@@ -30,13 +36,14 @@ import lasso from "@/lib/d3-lasso";
 import InfoPanel from "./InfoPanel.vue";
 import * as d3 from "d3";
 import Vue from "vue";
-import { Select,Option,Button } from "element-ui";
+import { Select,Option,Button,Switch } from "element-ui";
 
 Vue.component(Select.name, Select);
 Vue.component(Option.name, Option);
 Vue.component(Button.name, Button);
-
+Vue.component(Switch.name, Switch);
 var mylasso = lasso;
+
 export default {
     name: "RadvizView",
     components:{InfoPanel},
@@ -48,7 +55,7 @@ export default {
                 top:'0px',
                 left:'0px'
             },//信息版的动态style
-
+            timeFilterFlag:true,
             //预定义颜色列表
             colorList : [
                 "#327DB4",
@@ -118,7 +125,7 @@ export default {
             realRawData:[],
             net_filter_data:[],
             seq_filter_data:[],
-
+            timeFilter:[0,Infinity],
             //全局搜索高亮
             globalSearchIds:[],//全局搜索列表中的Id
             drawGlobalSearchIdsHighLight:()=>{return;},//在Sketch中高亮全局搜索节点的Id
@@ -173,7 +180,6 @@ export default {
                 this.rawData = this.seq_filter_data
                 this.pipeline()
             }
-
         },
         set_net_nodes(net_ids){//节点连接图圈选
             //net_nodes：nodes的序列，节点连接图圈选出来的
@@ -207,32 +213,54 @@ export default {
             //         .style("position","absolute");
         },
         pipeline:function(){
-            this.processRawData()    //处理原始数据，基于node进行聚合
-            this.processAttrData()   //统计属性级别的数据
+            let filteredRawData = this.filterRawData()
+            this.processRawData(filteredRawData)    //处理原始数据，基于node进行聚合
+            this.processAttrData(filteredRawData)   //统计属性级别的数据
             this.bindColor()         //为获得的属性进行颜色绑定
             this.dataGenerate()      //计算glyph、arc坐标
             this.drawRadviz();       //绘制radviz
             this.callLassoMode()     //允许圈选
         },
+        setTimeFilter(timeRange){//传入过滤的时间范围
+            const self = this;
+            if(timeRange === null){
+                self.timeFilter = [0,Infinity]
+            }
+            else{
+                self.timeFilter = JSON.parse(JSON.stringify(timeRange));
+            }
+            this.pipeline();
+        },
+        filterRawData(){
+            let vue_this = this
+            console.log(this.rawData.length)
+            let filteredRawData = this.rawData
+            if(this.timeFilterFlag){
+                filteredRawData = this.rawData.filter(function(item){
+                    let timestamp = Date.parse(item.time)
+                    return timestamp>=vue_this.timeFilter[0] && timestamp<=vue_this.timeFilter[1]
+                })
+            }
+            console.log(filteredRawData.length)
+            return filteredRawData
+        },
         bindColor:function(){
             let i=0;
-            
             for(let key in this.attrName){
                 if(i<this.colorList.length)this.attrColor[key]=this.colorList[i]
                 else this.attrColor[key]="#cccccc"
                 i++;
             }
         },
-        processRawData:function(){
-            let rawData = this.rawData
+        processRawData:function(filteredRawData){
             let midData = {}
-            for(let i=0;i<rawData.length;i++){
+            for(let i=0;i<filteredRawData.length;i++){
                 //按ip聚合
-                if(midData.hasOwnProperty(rawData[i]['node'])){
-                    midData[rawData[i]['node']].push(rawData[i])
+                if(midData.hasOwnProperty(filteredRawData[i]['node'])){
+                    midData[filteredRawData[i]['node']].push(filteredRawData[i])
                 }else{
-                    midData[rawData[i]['node']]=[]
-                    midData[rawData[i]['node']].push(rawData[i])
+                    midData[filteredRawData[i]['node']]=[]
+                    midData[filteredRawData[i]['node']].push(filteredRawData[i])
                 }
             }
             let i=0
@@ -272,7 +300,7 @@ export default {
                 this.aggregatePercent.push(tmp)
             }
         },
-        processAttrData:function(){
+        processAttrData:function(filteredRawData){
             let vue_this = this
             let attr_nums = this.attrName
             //统计原始结果的非零百分比和累计和
@@ -285,11 +313,11 @@ export default {
             for(let key in this.attrName){
                 let sum=0
                 let oneCnt=0
-                for(let i=0;i<this.rawData.length;i++){
-                    sum += this.rawData[i][key]
-                    if(this.rawData[i][key]>0)oneCnt+=1
+                for(let i=0;i<filteredRawData.length;i++){
+                    sum += filteredRawData[i][key]
+                    if(filteredRawData[i][key]>0)oneCnt+=1
                 }
-                this.notZeroPercent[key]=oneCnt/this.rawData.length
+                this.notZeroPercent[key]=oneCnt/filteredRawData.length
                 this.totalSum[key]=sum
                 // totalSumMax = Math.max(sum,totalSumMax)
                 totalSumSum += sum
@@ -866,7 +894,9 @@ export default {
             self.globalSearchIds = JSON.parse(JSON.stringify(ids))
             self.drawGlobalSearchIdsHighLight();
         },
-
+        handleTimeFilterFlagChange:function(){
+            this.pipeline()
+        }
     },   
 }
 </script>

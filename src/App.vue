@@ -130,6 +130,9 @@ export default {
     },
 
     handleRiverExportBrushTimeRange(timeRange){//RiverView导出时间范围
+
+      console.log('timeRange',timeRange)      
+
       //力导引图时间过滤
       this.$refs['fdView'].setTimeFilter(timeRange);
       //雷达图时间过滤
