@@ -113,8 +113,6 @@ export default {
 
     handleExportBrushIds(ids){//序列图刷选
       this.$refs['fdView'].setFilter(ids)
-
- 
       this.$refs['RadvizView'].set_seq_nodes(ids)
       
     },
@@ -153,6 +151,8 @@ export default {
       this.$refs['SequenceView'].highlightGlobalSearchNodes(this.searchList);
       //向雷达图传递搜索节点
       this.$refs['RadvizView'].highlightGlobalSearchNodes(this.searchList);
+      //向河流图传递搜索节点
+      this.$refs['RiverView'].highlightGlobalSearchNodes(this.searchList);
 
 
     },

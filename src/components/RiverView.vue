@@ -55,7 +55,13 @@ export default {
           maxTime:0,//最大时间
           minTime:0,//最小时间
           timeSortedArray:[],//排序后的时间列表
-          timeInterval:0
+          timeInterval:0,
+
+          //全局搜索高亮
+          globalSearchIds:[],//全局搜索列表中的Id
+          drawGlobalSearchIdsHighLight:()=>{return;},//高亮全局搜索节点的Id的bar
+
+  
         }
     },
     methods:{
@@ -187,6 +193,8 @@ export default {
             //比例尺（仅根据width，不考虑padding）
             const xScale = d3.scaleLinear().domain([self.minTime,self.maxTime]).range([0,width]);
 
+            console.log('yPosData',yPosData)
+
             //绘图
             for(let attr of self.attr_keys){//绘制bar
 
@@ -298,6 +306,11 @@ export default {
         },
 
         
+        highlightGlobalSearchNodes(ids){
+          this.globalSearchIds = JSON.parse(JSON.stringify(ids));
+          this.drawGlobalSearchIdsHighLight();
+        },
+
         exportSelectedRiver(type){ //导出被选择的River
           const self = this;
           self.$emit('exportSelectedRiver',type)

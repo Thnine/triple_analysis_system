@@ -128,7 +128,7 @@ export default {
             timeFilter:[0,Infinity],
             //全局搜索高亮
             globalSearchIds:[],//全局搜索列表中的Id
-            drawGlobalSearchIdsHighLight:()=>{return;},//在Sketch中高亮全局搜索节点的Id
+            drawGlobalSearchIdsHighLight:()=>{return;},//高亮全局搜索节点的Id
 
 
         }
