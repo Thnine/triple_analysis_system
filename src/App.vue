@@ -113,8 +113,6 @@ export default {
 
     handleExportBrushIds(ids){//序列图刷选
       this.$refs['fdView'].setFilter(ids)
-
- 
       this.$refs['RadvizView'].set_seq_nodes(ids)
       
     },
@@ -130,6 +128,9 @@ export default {
     },
 
     handleRiverExportBrushTimeRange(timeRange){//RiverView导出时间范围
+
+      console.log('timeRange',timeRange)      
+
       //力导引图时间过滤
       this.$refs['fdView'].setTimeFilter(timeRange);
       //雷达图时间过滤
@@ -150,6 +151,8 @@ export default {
       this.$refs['SequenceView'].highlightGlobalSearchNodes(this.searchList);
       //向雷达图传递搜索节点
       this.$refs['RadvizView'].highlightGlobalSearchNodes(this.searchList);
+      //向河流图传递搜索节点
+      this.$refs['RiverView'].highlightGlobalSearchNodes(this.searchList);
 
 
     },
