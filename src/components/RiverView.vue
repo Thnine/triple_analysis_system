@@ -72,6 +72,7 @@ export default {
 
             /**
              * data：[{'node':'192.0.0.1','time':'2020-11-04 00:00:00','attr_1':1,'attr_2':0,...}]
+             * 要求每个node在每个time只会出现一次
              */
 
 
@@ -132,6 +133,7 @@ export default {
                   max = v[attr]
                 }
               }
+
               drawData[type][self.timeSortedArray.indexOf(Date.parse(v['time']))]++;
             }
             self.drawData = drawData
@@ -192,8 +194,6 @@ export default {
 
             //比例尺（仅根据width，不考虑padding）
             const xScale = d3.scaleLinear().domain([self.minTime,self.maxTime]).range([0,width]);
-
-            console.log('yPosData',yPosData)
 
             //绘图
             for(let attr of self.attr_keys){//绘制bar
@@ -281,7 +281,51 @@ export default {
                    let date = new Date(self.timeSortedArray[self.timeSortedArray.length-1])
                    return date.getFullYear() + '-' + formatNumber(date.getMonth()+1) + '-' + formatNumber(date.getDate()) + ' ' + formatNumber(date.getHours()) + ':' + formatNumber(date.getMinutes()) + ':' + formatNumber(date.getSeconds()) 
                })
-            
+
+
+            //高亮函数
+            const highlightPlot = svg.append('g')
+            self.drawGlobalSearchIdsHighLight = ()=>{
+              
+              highlightPlot.selectAll('*').remove();
+
+              if(self.globalSearchIds.length == 0){//如果没有所有id
+                return ;
+              }
+              else{
+                let targetId = self.globalSearchIds[self.globalSearchIds.length - 1];//取搜索id序列最新的id作为搜索id
+                let filterData = self.rawData.filter(v=>v.node == targetId);
+                let highlightData = filterData.map(v=>{
+                  let time_index = self.timeSortedArray.indexOf(Date.parse(v.time))
+                  let type = self.attr_keys[0]
+                  for(let attr of self.attr_keys){
+                    if(v[attr] > v[type])
+                      type = attr
+                  }
+                  return {
+                    'id':targetId,
+                    'type':type,
+                    'time_index':time_index
+                  }
+                })
+
+                highlightPlot.selectAll('*')
+                             .data(highlightData)
+                             .enter()
+                             .append('line')
+                             .attr('stroke','#ff9900')
+                             .attr('stroke-width',4) 
+                             .attr('x1',(d)=>self.padding.left + xScale(self.timeSortedArray[d.time_index]))
+                             .attr('y1',(d)=>self.padding.top + yPosData[d.type][d.time_index][0])
+                             .attr('x2',(d)=>self.padding.left + xScale(self.timeSortedArray[d.time_index]))
+                             .attr('y2',(d)=>self.padding.top + yPosData[d.type][d.time_index][1])
+
+              }
+              
+            }
+            self.drawGlobalSearchIdsHighLight();
+
+
             //刷选时间交互
             const brushPlot = svg.append('g')
             const brush = d3.brushX()
@@ -301,6 +345,8 @@ export default {
                               
                             })
             brushPlot.call(brush)
+
+
 
 
         },

@@ -262,8 +262,6 @@ export default {
 
         drawMainPlot(data){
 
-            console.log('main-data',data)
-
             const self = this;
             const mainSVG = d3.select(self.$refs['SequenceView-main-canvas'])
 
