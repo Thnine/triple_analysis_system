@@ -1,4 +1,4 @@
-# bitcoin_sequence_view
+# triple_analysis_system
 
 > A Vue.js project
 
