@@ -122,7 +122,6 @@ export default {
         return date.getFullYear() + '-' + formatNumber(date.getMonth()+1) + '-' + formatNumber(date.getDate()) + ' ' + formatNumber(date.getHours()) + ':' + formatNumber(date.getMinutes()) + ':' + formatNumber(date.getSeconds()) 
       })
 
-      // this.drawStreamGraph(this.testData);
       this.drawBubbleChart(this.testData);
     },
 
@@ -130,9 +129,6 @@ export default {
       this.switch_callback(type)
     },
 
-    // freshButton() {
-      
-    // },
 
     Data2Stanard(test_data){ //整理原始的概率数据为type数据{node,type,time}
       let data = []

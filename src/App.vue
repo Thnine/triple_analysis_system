@@ -129,8 +129,6 @@ export default {
 
     handleRiverExportBrushTimeRange(timeRange){//RiverView导出时间范围
 
-      console.log('timeRange',timeRange)      
-
       //力导引图时间过滤
       this.$refs['fdView'].setTimeFilter(timeRange);
       //雷达图时间过滤
@@ -156,7 +154,7 @@ export default {
 
 
     },
-    handleClearSearchList(){//清空搜索列表
+    handleClearSearchList(){//清空搜索列表，并把这个消息传递给各个视图
       this.searchList.length = 0;
       //向节点连接图传递搜索节点
       this.$refs['fdView'].highlightGlobalSearchNodes(this.searchList);
@@ -164,6 +162,9 @@ export default {
       this.$refs['SequenceView'].highlightGlobalSearchNodes(this.searchList);
       //向雷达图传递搜索节点
       this.$refs['RadvizView'].highlightGlobalSearchNodes(this.searchList);
+        //向河流图传递搜索节点
+      this.$refs['RiverView'].highlightGlobalSearchNodes(this.searchList);
+
     },
 
 
@@ -172,57 +173,6 @@ export default {
     },
   },
   mounted(){
-    // d3.json('static/faker_links（序列）.json',(links)=>{
-    //   d3.json('static/faker_nodes（序列）.json',(nodes)=>{
-    //     d3.json('static/bitcoins_dim_data.json',(coms)=>{
-    //       /**生成一个假的nodes_color数据 */
-    //       let nodes_color = {}
-    //       for(let n of nodes){
-    //         if(Math.random() < 0.1)
-    //           continue;
-    //         if(Math.random() < 0.3){
-    //           nodes_color[n.id] = '#b51c1c'
-    //         }
-    //         else{
-    //           nodes_color[n.id] = '#1f8bd4'
-    //         }
-    //       }
-    //       //网络图
-    //       this.$refs['fdView'].start(nodes,links,nodes_color);
-
-    //       this.nodes = nodes
-    //       this.links = links
-          
-    //       //雷达图
-    //       let radar_data = []
-    //       for(let i = 0;i < coms.length;i++){
-    //         let tempData = JSON.parse(JSON.stringify(coms[i]))
-    //         tempData['id'] = String(i)
-    //         radar_data.push(tempData)
-    //       }
-    //       this.$refs['RadvizView'].set_raw_data(radar_data)
-
-    //       //气泡图
-    //       let bubble_data = []
-    //       for(let i = 0;i < coms.length;i++){
-    //         let tempData = JSON.parse(JSON.stringify(coms[i]))
-    //         tempData['ip'] = tempData['node']
-    //         delete tempData['node']
-    //         bubble_data.push(tempData)
-    //       }
-    //       this.$refs['BubbleChartView'].set_raw_data(bubble_data)
-
-    //       //河流图
-    //       let river_data = []
-    //       for(let i = 0;i < coms.length;i++){
-    //         let tempData = JSON.parse(JSON.stringify(coms[i]))
-    //         river_data.push(tempData)
-    //       }
-    //       this.$refs['RiverView'].start(river_data)
-
-    //     })
-    //   })
-    // })
       d3.csv('static/event_class.csv',(err,rawEvent)=>{
         d3.csv('static/communication.csv',(err,rawCom)=>{
           d3.csv('static/ip_info.csv',(err,rawType)=>{

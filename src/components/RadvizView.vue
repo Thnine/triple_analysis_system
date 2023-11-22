@@ -233,7 +233,6 @@ export default {
         },
         filterRawData(){
             let vue_this = this
-            console.log(this.rawData.length)
             let filteredRawData = this.rawData
             if(this.timeFilterFlag){
                 filteredRawData = this.rawData.filter(function(item){
@@ -241,7 +240,6 @@ export default {
                     return timestamp>=vue_this.timeFilter[0] && timestamp<=vue_this.timeFilter[1]
                 })
             }
-            console.log(filteredRawData.length)
             return filteredRawData
         },
         bindColor:function(){
@@ -710,7 +708,6 @@ export default {
 
                     let id = vue_this.newData[i].node;
                     if(vue_this.globalSearchIds.indexOf(id) != -1){
-                        console.log('ok')
                         d3.select(this).classed('radviz-global-highlight',true)
                     }
                     else{
