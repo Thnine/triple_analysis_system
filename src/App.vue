@@ -128,7 +128,8 @@ export default {
     },
 
     handleRiverExportBrushTimeRange(timeRange){//RiverView导出时间范围
-
+      //大规模序列视图过滤（仅针对时间排序）
+      this.$refs['SequenceView'].setTimeFilter(timeRange);
       //力导引图时间过滤
       this.$refs['fdView'].setTimeFilter(timeRange);
       //雷达图时间过滤

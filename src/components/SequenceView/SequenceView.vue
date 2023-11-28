@@ -1,6 +1,12 @@
 <template>
   <div>
     <div class="SequenceView-canvas-container">
+        <el-switch
+            v-model="timeFilterFlag"
+            active-text="时间过滤"
+            @change="handleTimeFilterFlagChange"
+            style="position:absolute;left:20px;top:60px;">
+        </el-switch>
         <svg ref="SequenceView-sketch-canvas" class="SequenceView-sketch-canvas"></svg>
         <svg ref="SequenceView-main-canvas" class="SequenceView-main-canvas"></svg>
     </div>
@@ -19,11 +25,12 @@ export default {
             //关键数据
             links:[],
             nodes:[],
-            
+
+
             //配置数据
                 //sketch相关
             sketchPadding:{
-                top:40,
+                top:60,
                 bottom:20,
                 left:10,
                 right:10,
@@ -32,7 +39,7 @@ export default {
             maxSketchColor:'#3c78d8',//最大值颜色
                 //主视图相关
             mainPadding:{
-                top:40,
+                top:60,
                 bottom:20,
                 left:10,
                 right:10,
@@ -57,6 +64,9 @@ export default {
             globalSearchIds:[],//全局搜索列表中的Id
             drawGlobalSearchIdsHighLightInSketch:()=>{return;},//在Sketch中高亮全局搜索节点的Id
             drawGlobalSearchIdsHighLightInMain:()=>{return;},//在Main中高亮全局搜索节点的Id
+            timeFilterRange:null,//时间过滤范围
+            //其他项
+            timeFilterFlag:true,
 
         }
     },
@@ -65,33 +75,36 @@ export default {
             const self = this;
             let node_num = nodes.length
             let cnt = 0
-            let nodeMap = {}
+            let nodeMap = {}//nodes id -> nodes index 的绑定map
             for(let item of nodes){
                 nodeMap[item['id']]=cnt++
             }
-            let mat = new Array(node_num).fill(0).map(() => new Array(timePatches).fill(0.001 * Math.random()));
+
+            //计算timeList（包含过滤过程）
+            let timeList = []
+            for(let time = self.minTime;time <= self.maxTime;time += self.timeInterval){
+                if( !self.timeFilterFlag  || self.timeFilterRange == null || (time >= self.timeFilterRange[0] && time <= self.timeFilterRange[1])){
+                    timeList.push(time)
+                }
+            }
+            if(timeList.length == 0){
+                return self.nodes
+            }
+
+            let mat = new Array(node_num).fill(0).map(() => new Array(timeList.length).fill(0.0001 * Math.random()));
 
             for(let l of links){
                 let source = nodeMap[l['source']], target = nodeMap[l['target']], time = Date.parse(l['time'])
-                let timeIndex = (time - self.minTime)/timeInterval
+                let timeIndex = timeList.indexOf(time)
                 if(source !== undefined)
                     mat[source][timeIndex]++;
                 if(target !== undefined)
                     mat[target][timeIndex]++;
             }
             
-            // //去均值
-            // for(let j = 0;j < mat[0].length;j++){
-            //     let arr = mat.map(v=>v[j]);
-            //     let mean = 1.0 * arr.reduce((sum,cur)=>sum+cur,0) / arr.length
-            //     for(let i = 0;i < mat.length;i++){
-            //         mat[i][j] -= mean;
-            //     }
-            // }
-
             let resMat = await WCluster.PCA(mat, { nCompNIPALS: 1 })
             let tmp = 0
-            for(let i=0;i<resMat.length;i++){
+            for(let i=0;i<resMat.length;i++){//resMat[i][1]保存了节点在nodes中的原本的index
                 resMat[i].push(tmp++)
             }
             resMat = resMat.sort((a,b)=>(b[0]-a[0]))
@@ -144,6 +157,7 @@ export default {
             }
             self.timeInterval = timeInterval
 
+
             //给nodes排序
             await self.makeSeqMat(self.nodes,self.links,(self.maxTime-self.minTime)/self.timeInterval+1,self.timeInterval).then(res=>{
                 self.nodes = res
@@ -170,6 +184,19 @@ export default {
             }
             self.drawSketchPlot(SketchData)
                         
+        },
+
+        reDraw(){ //使用当前的数据重绘
+            const self = this;
+            if(self.nodes !== undefined && self.links !== undefined && self.nodes !== null && self.links !== null && self.nodes.length != 0){
+                self.start(JSON.parse(JSON.stringify(self.nodes)),JSON.parse(JSON.stringify(self.links)),JSON.parse(JSON.stringify(self.timeInterval)))
+            }
+        },
+
+        setTimeFilter(timeRange){ //按时间范围进行节点排序
+            const self = this;
+            self.timeFilterRange = JSON.parse(JSON.stringify(timeRange));
+            self.reDraw();
         },
 
         drawSketchPlot(data){
@@ -266,6 +293,10 @@ export default {
                                 self.drawMainPlot(mainData)
                             })    
             const brushPlot = sketchSVG.append('g').call(brush)
+
+            //清空mainPlot
+            const mainSVG = d3.select(self.$refs['SequenceView-main-canvas'])
+            mainSVG.selectAll('*').remove();
 
         },
 
@@ -452,7 +483,10 @@ export default {
             self.drawGlobalSearchIdsHighLightInSketch();
             self.drawGlobalSearchIdsHighLightInMain();
         },
-
+        handleTimeFilterFlagChange(){//时间筛选开关发生切换
+            const self = this;
+            self.reDraw()
+        },
 
         /**
          * 向外接口
@@ -475,6 +509,7 @@ export default {
     display: flex;
     flex-direction: row;
     align-items: stretch;
+    display:flex;
 }
 
 .SequenceView-sketch-canvas{
