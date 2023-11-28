@@ -79,6 +79,16 @@ export default {
                 if(target !== undefined)
                     mat[target][timeIndex]++;
             }
+            
+            // //去均值
+            // for(let j = 0;j < mat[0].length;j++){
+            //     let arr = mat.map(v=>v[j]);
+            //     let mean = 1.0 * arr.reduce((sum,cur)=>sum+cur,0) / arr.length
+            //     for(let i = 0;i < mat.length;i++){
+            //         mat[i][j] -= mean;
+            //     }
+            // }
+
             let resMat = await WCluster.PCA(mat, { nCompNIPALS: 1 })
             let tmp = 0
             for(let i=0;i<resMat.length;i++){
@@ -130,8 +140,7 @@ export default {
                     if(timeInterval > timeSortedArray[i] - timeSortedArray[i-1]){
                         timeInterval = timeSortedArray[i] - timeSortedArray[i-1]
                     }
-                }
-                
+                } 
             }
             self.timeInterval = timeInterval
 

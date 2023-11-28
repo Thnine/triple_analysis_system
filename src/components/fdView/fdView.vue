@@ -33,10 +33,15 @@
 <script>
 import * as d3 from 'd3'
 import Vue from 'vue'
+import Graph from 'graphology'
+import {circular} from 'graphology-layout'
+import FA2Layout from 'graphology-layout-forceatlas2/worker';
+
 import lasso from "./d3-lasso"
 import InfoPanel from "../InfoPanel.vue";
 import {Select,Option,RadioGroup,RadioButton,Switch} from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
+import forceAtlas2 from 'graphology-layout-forceatlas2'
 
 
 Vue.component(Select.name,Select)
@@ -188,20 +193,54 @@ export default {
                 nodes = new_nodes
             }
 
-            let simulation = d3.forceSimulation()
-                                .nodes(nodes)
-            let linkForce = d3.forceLink(links).id(d=>d.id)
-
-            simulation.force('charge_force', d3.forceManyBody().strength(-10))
-                    .force('center_force', d3.forceCenter(self.padding.left + 0.5 * (width - self.padding.left - self.padding.right),self.padding.top + 0.5 * (height - self.padding.top - self.padding.bottom)))//中心点为原点
-                    .force('links', linkForce)
-            simulation.stop();
-            for(let i = 0;i < 300;i++){
-                simulation.tick();
-            }
 
             /**
-             * 将力导引坐标变换为实际的像素坐标
+             * 布局
+             */
+            
+            function forceDirectedLayout(nodes,links){//经典力导引布局
+                let simulation = d3.forceSimulation()
+                                    .nodes(nodes)
+                let linkForce = d3.forceLink(links).id(d=>d.id)
+                simulation.force('charge_force', d3.forceManyBody().strength(-10))
+                        .force('center_force', d3.forceCenter(self.padding.left + 0.5 * (width - self.padding.left - self.padding.right),self.padding.top + 0.5 * (height - self.padding.top - self.padding.bottom)))//中心点为原点
+                        .force('links', linkForce)
+                simulation.stop();
+                for(let i = 0;i < 200;i++){
+                    simulation.tick();
+                }
+                return nodes,links
+            }
+
+            function fa2Layout(nodes,links){//force atltas 2布局
+                let graph = new Graph({'multi':true});
+                for(let n of nodes){
+                    graph.addNode(n.id,{
+                        'x':0,
+                        'y':0,
+                    })
+                }
+                for(let l of links){
+                    graph.addEdge(l.source,l.target)
+                }
+                circular.assign(graph,{'dimensions':['x','y']})
+                forceAtlas2.assign(graph,{'iterations':200})
+                nodes.forEach(v=>{
+                    v['x'] = graph.getNodeAttribute(v.id,'x')
+                    v['y'] = graph.getNodeAttribute(v.id,'y')
+                })
+                links.forEach(l=>{
+                    l.source = nodes.find(v=>v.id == l.source)
+                    l.target = nodes.find(v=>v.id == l.target)
+                })
+                return nodes,links
+            }
+
+            //设定布局
+            nodes,links = fa2Layout(nodes,links)
+            
+            /**
+             * 将布局坐标变换为实际的像素坐标
              */
 
             const maxX = Math.max(...nodes.map(v=>v.x))

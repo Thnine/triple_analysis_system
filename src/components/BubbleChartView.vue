@@ -415,6 +415,20 @@ export default {
       svg.select("#xaxis").selectAll(".tick>line").attr("stroke-opacity", 0.4)
       
 
+      // //移动typetag
+      const typeTag = svg.selectAll('.typeTag')
+      typeTag.attr("transform", function (d, i) {
+          return `translate(${0},${(y(i+1) + y.bandwidth() / 2) + margin.top - 7.5})`
+      })
+
+      const typeTagText = typeTag.select('text')
+                                  .attr('fill',(d)=>{
+                                    if(d==this.type_select){
+                                      return '#c17606'
+                                    }
+                                    return 'black'
+                                  })
+
       var glf = g
         .selectAll(".glyph")
         .data(corr, function (d) {
@@ -609,7 +623,7 @@ export default {
           return d
         })
         .attr("x", 15)
-        .attr("y", textHeight - 4)
+        .attr("y", textHeight - 2)
         .attr("text-anchor", "start")
         .style("font-size", textInitiSize)
         .attr("fill", function (d) {
@@ -628,6 +642,8 @@ export default {
             poolInit(JSON.parse(JSON.stringify(data)), type_list, type_select)
           }
       }
+
+      this.switch_callback(type_list[0])
 
     },  
   },
