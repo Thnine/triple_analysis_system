@@ -1,5 +1,5 @@
 <template>
-  <div ref="info-panel-container" class="info-panel-container">
+  <div v-show="showFlag" class="info-panel-container" :style=InfoPanelStyle>
 
     <div style="background-color:rgba(0,0,0,0.7);padding:10px;">
       <div v-for="(m,index) in messageData" :key="index" style="display:flex;align-items:center">
@@ -30,6 +30,11 @@ export default {
       messageData:[//用于显示的message数据
 
       ],
+
+      showFlag:false,
+      InfoPanelStyle:{
+
+      },
     }
   },
 
@@ -44,6 +49,16 @@ export default {
         this.messageData.push([key,message[key]])
       }
     },
+    show(){
+      this.showFlag = true
+    },
+    hidden(){
+      this.showFlag = false
+    },
+    setPos(top,left){
+      this.InfoPanelStyle['top'] = `${top}px`
+      this.InfoPanelStyle['left'] = `${left}px`
+    }
   }
 
 }

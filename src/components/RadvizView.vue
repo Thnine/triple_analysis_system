@@ -24,8 +24,6 @@
         
         <div class="radviz-canvas">
             <svg id="radviz-svg" style="width:100%;height:100%;"></svg>
-            <!--悬浮信息版-->
-            <InfoPanel :style="InfoPanelStyle" v-show="InfoPanelVisible" ref="infoPanel"/>
         </div>
         
     </div>
@@ -33,7 +31,6 @@
 
 <script>
 import lasso from "@/lib/d3-lasso";
-import InfoPanel from "./InfoPanel.vue";
 import * as d3 from "d3";
 import Vue from "vue";
 import { Select,Option,Button,Switch } from "element-ui";
@@ -46,15 +43,9 @@ var mylasso = lasso;
 
 export default {
     name: "RadvizView",
-    components:{InfoPanel},
+    props:['InfoPanel'],
     data: function () {
         return {
-            //信息板相关
-            InfoPanelVisible:false,
-            InfoPanelStyle:{
-                top:'0px',
-                left:'0px'
-            },//信息版的动态style
             timeFilterFlag:true,
             //预定义颜色列表
             colorList : [
@@ -673,28 +664,16 @@ export default {
                 let selection = vue_this.svg.selectAll('.points').nodes()
                 let i = selection.indexOf(this)
 
-                vue_this.InfoPanelVisible = true;//显示
-                vue_this.$refs['infoPanel'].setMessageData(vue_this.print(i));//更新信息
+                vue_this.InfoPanel.show()//显示
+                vue_this.InfoPanel.setMessageData(vue_this.print(i));//更新信息
                 /**
                  * 更新位置
                  */
-                vue_this.InfoPanelStyle['top'] = `${d3.event.offsetY + 10}px`
-                vue_this.InfoPanelStyle['left'] = `${d3.event.offsetX + 10}px`
-
-                // vue_this.tooltip
-                //     .style("left",(d3.event.offsetX+15)+"px")
-                //     .style("top",(d3.event.offsetY-15)+"px")
-                //     .style("opacity",1)
-                //     .style("font-size","15px")
-                //     .html(vue_this.print(i))
+                vue_this.InfoPanel.setPos(d3.event.clientY + 10,d3.event.clientX + 10)
             })
             .on("mouseout", function (d) {
-                vue_this.InfoPanelVisible = false;//显示
+                vue_this.InfoPanel.hidden()//显示
 
-                // vue_this.tooltip.style("opacity","0")
-                // .style("left",0)
-                // .style("top",0)
-                // .html("")
             })
             .attr("transform", function (d) {
                 return "translate(" + d.coordinateX() + "," + d.coordinateY() + ")"

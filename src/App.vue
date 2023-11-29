@@ -5,21 +5,21 @@
         <div class="top">
           <div class="comp-container" style="flex: 0 0 650px;border-right: 3px solid gray;">
             <div class="comp-title">社群信息河流图</div>
-            <RiverView @exportBrushTimeRange="handleRiverExportBrushTimeRange" ref="RiverView" @exportSelectedRiver="handleExportSelectedRiver" style="width:100%;height:100%;"></RiverView>
+            <RiverView :InfoPanel="InfoPanelRef" @exportBrushTimeRange="handleRiverExportBrushTimeRange" ref="RiverView" @exportSelectedRiver="handleExportSelectedRiver" style="width:100%;height:100%;"></RiverView>
           </div>
           <div class="comp-container" style="flex: 1 1 0;">
             <div class="comp-title">社群成员迁移气泡图</div>
-            <BubbleChartView ref="BubbleChartView"></BubbleChartView>
+            <BubbleChartView :InfoPanel="InfoPanelRef" ref="BubbleChartView"></BubbleChartView>
           </div>
         </div>
         <div class="bottom">
           <div class="comp-container" style=" border-right: 3px solid gray;flex:0 0 650px;display:flex;align-items:center;justify-content:center">
             <div class="comp-title">属性雷达视图</div>
-            <RadvizView ref="RadvizView" @radar_selected_nodes="radar_selected_nodes" style="width:100%;height:100%;"></RadvizView>
+            <RadvizView :InfoPanel="InfoPanelRef" ref="RadvizView" @radar_selected_nodes="radar_selected_nodes" style="width:100%;height:100%;"></RadvizView>
           </div>
           <div class="comp-container" style="flex:1 1 0">
             <div class="comp-title">节点连接图</div>
-            <fdView ref="fdView" style="width:100%;height:100%" @exportChosenNodes="handleExportChosenNodes"/>
+            <fdView :InfoPanel="InfoPanelRef" ref="fdView" style="width:100%;height:100%" @exportChosenNodes="handleExportChosenNodes"/>
           </div>
         </div>
       </div>
@@ -48,6 +48,7 @@
         </div>
       </div>
     </div>
+    <InfoPanel ref="InfoPanel"/>
   </div>
 </template>
 
@@ -58,6 +59,7 @@ import ControllerView from './components/ControllerView.vue';
 import SequenceView from './components/SequenceView/SequenceView.vue'
 import fdView from './components/fdView/fdView.vue'
 import RiverView from './components/RiverView.vue';
+import InfoPanel from "./components/InfoPanel.vue";
 
 import * as d3 from 'd3';
 import Vue from 'vue'
@@ -76,7 +78,8 @@ export default {
     SequenceView,
     fdView,
     BubbleChartView,
-    RiverView
+    RiverView,
+    InfoPanel,
   },
   data(){
     return {
@@ -84,6 +87,7 @@ export default {
       searchSuggestions:[],
       searchList:[],
       nodes:[],//节点信息
+      InfoPanelRef:null
     }
   },
   methods:{
@@ -174,6 +178,9 @@ export default {
     },
   },
   mounted(){
+      //保存消息框的ref
+      this.InfoPanelRef = this.$refs['InfoPanel'] 
+      //载入数据
       d3.csv('static/event_class.csv',(err,rawEvent)=>{
         d3.csv('static/communication.csv',(err,rawCom)=>{
           d3.csv('static/ip_info.csv',(err,rawType)=>{
@@ -341,6 +348,7 @@ body{
   color: #2c3e50;
   width:100vw;
   height:100vh;
+  display: relative;
 }
 
 .container{

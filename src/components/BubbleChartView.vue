@@ -12,6 +12,7 @@ import * as chroma from "@/lib/chroma.min.js";
 
 export default {
 
+  props:['InfoPanel'],
 
   data() {
     return {
@@ -372,16 +373,38 @@ export default {
       y_axis.tickSize(width + 20)
 
       x_axis.tickSize(height - 5)
-      g.append("g")
+      const x_axis_g = g.append("g")
         .attr("id", "xaxis")
         .attr("class", "axis axis--major")
         .call(x_axis)
 
-      g.append("g")
+      const y_axis_g = g.append("g")
         .attr("class", "y axis")
         .attr("id", "yaxis")
         .call(y_axis)
         .attr("transform", "translate(" + width + ", 0)")
+
+      //添加信息框
+
+      x_axis_g.selectAll('line')
+        .attr('stroke-width',2)
+        .on('mouseover',(d,i)=>{
+          console.log(this.raw_time_list)
+          console.log(i)
+          let messageData = {}
+          messageData['时间'] = `${this.raw_time_list[i]} 至 ${this.raw_time_list[i+1]}`
+          this.InfoPanel.show()//显示
+          this.InfoPanel.setMessageData(messageData);//更新信息
+          /**
+           * 更新位置
+           */
+          this.InfoPanel.setPos(d3.event.clientY + 10,d3.event.clientX + 10)
+
+        })
+        .on('mouseout',(d,i)=>{
+          this.InfoPanel.hidden();
+        })
+
 
       //添加两侧tick
       svg.selectAll('.start-tick').remove()

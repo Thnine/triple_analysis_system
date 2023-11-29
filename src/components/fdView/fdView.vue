@@ -21,8 +21,6 @@
                 <el-radio-button label="圈选"></el-radio-button>
             </el-radio-group>
         </div>
-        <!--悬浮信息版-->
-        <InfoPanel :style="InfoPanelStyle" v-show="InfoPanelVisible" ref="infoPanel"/>
 
         <svg ref="fdView-canvas" style="height:100%;width:100%"></svg>
     </div>
@@ -38,7 +36,6 @@ import {circular} from 'graphology-layout'
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 
 import lasso from "./d3-lasso"
-import InfoPanel from "../InfoPanel.vue";
 import {Select,Option,RadioGroup,RadioButton,Switch} from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 import forceAtlas2 from 'graphology-layout-forceatlas2'
@@ -52,9 +49,8 @@ Vue.component(Switch.name,Switch)
 
 export default {
     name:'fdView',
-    components:{
-        InfoPanel
-    },
+
+    props:['InfoPanel'],
     data(){
         return {
             //数据项
@@ -92,12 +88,6 @@ export default {
             lasso:null,
             swithMouseMode:()=>{return 1},
 
-            //悬浮信息板相关
-            InfoPanelVisible:false,
-            InfoPanelStyle:{
-                top:'0px',
-                left:'0px'
-            },//信息版的动态style
             
         }
     },
@@ -356,17 +346,15 @@ export default {
                                     //权重
                                     messageData['权重'] = d['weight']
 
-                                    self.InfoPanelVisible = true;//显示
-                                    self.$refs['infoPanel'].setMessageData(messageData);//更新信息
+                                    self.InfoPanel.show()//显示
+                                    self.InfoPanel.setMessageData(messageData);//更新信息
                                     /**
                                      * 更新位置
                                      */
-                                    self.InfoPanelStyle['top'] = `${d3.event.offsetY + 10}px`
-                                    self.InfoPanelStyle['left'] = `${d3.event.offsetX + 10}px`
-
+                                    self.InfoPanel.setPos(d3.event.clientY + 10,d3.event.clientX + 10)
                                 })
                                 .on('mouseout',(d,i)=>{
-                                    self.InfoPanelVisible = false;//显示
+                                    self.InfoPanel.hidden()//隐藏
                                 })
             
 

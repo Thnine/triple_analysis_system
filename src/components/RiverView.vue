@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="overflow:visible">
     <svg ref="RiverCanvas" style="width:100%;height:100%"></svg>
   </div>
 </template>
@@ -11,6 +11,8 @@ import Vue from 'vue'
 
 export default {
     name:'RiverView',
+    props:['InfoPanel'],
+
     data(){
         return {
 
@@ -61,7 +63,6 @@ export default {
           globalSearchIds:[],//全局搜索列表中的Id
           drawGlobalSearchIdsHighLight:()=>{return;},//高亮全局搜索节点的Id的bar
 
-  
         }
     },
     methods:{
@@ -195,22 +196,6 @@ export default {
             //比例尺（仅根据width，不考虑padding）
             const xScale = d3.scaleLinear().domain([self.minTime,self.maxTime]).range([0,width]);
 
-            //绘图
-            for(let attr of self.attr_keys){//绘制bar
-
-              svg.append('g')
-                 .selectAll('*')
-                 .data(yPosData[attr])
-                 .enter()
-                 .append('line')
-                 .attr('stroke','black')
-                 .attr('stroke-width',4)
-                 .attr('x1',(d,i)=>self.padding.left + xScale(self.timeSortedArray[i]))
-                 .attr('y1',(d)=>self.padding.top + d[0])
-                 .attr('x2',(d,i)=>self.padding.left + xScale(self.timeSortedArray[i]))
-                 .attr('y2',(d)=>self.padding.top + d[1])
-
-            }
             for(let i = 0;i < self.attr_keys.length;i++){//绘制河流
               let attr = self.attr_keys[i];
               svg.append('g')
@@ -238,19 +223,9 @@ export default {
                 .style('cursor','pointer')
                 .on('click',()=>{
                   self.exportSelectedRiver(self.attr_keys[i])
-                  
                 })
                 
             }
-            
-            // //绘制底线
-            // svg.append('line')
-            //   .attr('stroke','black')
-            //   .attr('stroke-width',2)
-            //   .attr('x1',self.padding.left)
-            //   .attr('y1',self.padding.top + height + 2)
-            //   .attr('x2',self.padding.left + width)
-            //   .attr('y2',self.padding.top + height + 2)
 
             //绘制两侧ticks
             svg.append('text') //起始时间文本
@@ -330,7 +305,17 @@ export default {
             const brushPlot = svg.append('g')
             const brush = d3.brushX()
                             .extent([[self.padding.left,self.padding.top],[self.padding.left + width,self.padding.top + height]])
+                            .on("brush",()=>{
+                                
+                                // let brushLeft = d3.event.selection[0] - self.padding.left
+                                // let brushRight = d3.event.selection[1] - self.padding.left
+                                // let leftTimeStamp = xScale.invert(brushLeft)
+                                // let rightTimeStamp = xScale.invert(brushRight)
+                                // self.InfoPanel.show()
+                                // let messageData = 
+                            })
                             .on("end",()=>{
+                                self.InfoPanel.hidden()
                                 if(d3.event.selection === null){
                                   this.exportBrushTimeRange(null)
                                 }
@@ -347,6 +332,40 @@ export default {
             brushPlot.call(brush)
 
 
+            for(let attr of self.attr_keys){//绘制bar
+              brushPlot.append('g')
+                 .selectAll('*')
+                 .data(yPosData[attr])
+                 .enter()
+                 .append('line')
+                 .attr('stroke','black')
+                 .attr('stroke-width',4)
+                 .attr('stroke-opacity',0.1)
+                 .attr('x1',(d,i)=>self.padding.left + xScale(self.timeSortedArray[i]))
+                 .attr('y1',(d)=>self.padding.top + d[0])
+                 .attr('x2',(d,i)=>self.padding.left + xScale(self.timeSortedArray[i]))
+                 .attr('y2',(d)=>self.padding.top + d[1])
+                 .on('mouseover',(d,i)=>{
+                    let messageData = {};
+                    function formatNumber(n){
+                        n = n.toString();
+                        return n[1] ? n: '0' + n 
+                    }
+                    let date = new Date(self.timeSortedArray[i])
+                    messageData['时间'] = date.getFullYear() + '-' + formatNumber(date.getMonth()+1) + '-' + formatNumber(date.getDate()) + ' ' + formatNumber(date.getHours()) + ':' + formatNumber(date.getMinutes()) + ':' + formatNumber(date.getSeconds()) 
+
+                    self.InfoPanel.show()//显示
+                    self.InfoPanel.setMessageData(messageData);//更新信息
+                    /**
+                     * 更新位置
+                     */
+                    self.InfoPanel.setPos(d3.event.clientY + 10,d3.event.clientX + 10)
+
+                 })
+                 .on('mouseout',()=>{
+                    self.InfoPanel.hidden()//隐藏
+                 })
+            }
 
 
         },
