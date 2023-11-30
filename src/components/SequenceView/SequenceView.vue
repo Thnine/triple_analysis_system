@@ -3,7 +3,7 @@
     <div class="SequenceView-canvas-container">
         <el-switch
             v-model="timeFilterFlag"
-            active-text="时间过滤"
+            active-text="根据所选时间重排序"
             @change="handleTimeFilterFlagChange"
             style="position:absolute;left:20px;top:60px;">
         </el-switch>
@@ -44,6 +44,9 @@ export default {
                 left:10,
                 right:10,
             },
+            timeFilterHeight:20,//过滤标记区域高度
+            timeFilterCircleSize:3,//过滤标注点半径
+            timeFilterCircleColor:'black',//过滤标注点半径
             highlightWidth:20,//高亮区域宽度
             highlightCircleSize:3,//高亮标注点半径
             highlightCircleColor:'black',//高亮标注点颜色
@@ -51,6 +54,7 @@ export default {
             maxMainColor:'#3c78d8',//最大值颜色
             mainUnitStrokeWidth:0.5,//序列方块边宽
             mainUnitStrokeColor:'lightgray',//序列方块边颜色
+            globalHighlightColor:'black',//全局高亮的颜色
             
 
 
@@ -244,7 +248,7 @@ export default {
             self.drawGlobalSearchIdsHighLightInSketch = ()=>{
                 rects.each(function(d,i){
                     if(self.globalSearchIds.indexOf(d.id) != -1){
-                        d3.select(this).attr('stroke','#ff9900').attr('stroke-width',2)
+                        d3.select(this).attr('stroke',self.globalHighlightColor).attr('stroke-width',2)
                     }
                     else{
                         d3.select(this).attr('stroke',null).attr('stroke-width',null)
@@ -312,12 +316,12 @@ export default {
             const width = mainSVG.node().getBoundingClientRect().width;
 
             //计算项目
-            let timeList = []
+            let timeList = [] //所有时间的列表（不考虑时间过滤）
             for(let time = self.minTime;time<=self.maxTime;time += self.timeInterval){
                 timeList.push(time)    
             }       
 
-            const mainPlotHeight = height - self.mainPadding.top - self.mainPadding.bottom;
+            const mainPlotHeight = height - self.mainPadding.top - self.mainPadding.bottom - self.timeFilterHeight;
             const mainPlotwidth = width - self.mainPadding.left - self.mainPadding.right - self.highlightWidth;
 
             const unitHeight = mainPlotHeight / data.length;
@@ -336,9 +340,11 @@ export default {
                                  .domain([0, maxValue])
                                  .range([self.minMainColor, self.maxMainColor])
 
+            //struct
             const mainPlot = mainSVG.append('g')
             const highlightPlot = mainSVG.append('g')
             const timeAxisPlot = mainSVG.append('g')
+            const timeFilterPlot = mainSVG.append('g')
             const globalSearchHighLightPlot = mainSVG.append('g')
             const brushPlot = mainSVG.append('g')
 
@@ -350,7 +356,7 @@ export default {
                 .enter()
                 .append('g')
                 .classed('seq-main-row',true)
-                .attr('transform',(d,i)=>`translate(${0},${self.mainPadding.top + i * unitHeight})`)
+                .attr('transform',(d,i)=>`translate(${0},${self.mainPadding.top + self.timeFilterHeight + i * unitHeight})`)
                 .selectAll('*')
                 .data(d=>d['value'])
                 .enter()
@@ -375,7 +381,7 @@ export default {
                     if(index != -1){
                         highlightPlot.append('circle')
                                     .attr('cx',self.mainPadding.left + 0.5 * self.highlightWidth)
-                                    .attr('cy',self.mainPadding.top + index * unitHeight + 0.5 * unitHeight)
+                                    .attr('cy',self.mainPadding.top + self.timeFilterHeight + index * unitHeight + 0.5 * unitHeight)
                                     .attr('r',self.highlightCircleSize)
                                     .attr('fill',self.highlightCircleColor)
                     }
@@ -391,11 +397,11 @@ export default {
                         globalSearchHighLightPlot.append('rect')
                                              .attr('x',0)
                                              .attr('y',0)
-                                             .attr('transform',(d)=>`translate(${self.mainPadding.left + self.highlightWidth},${self.mainPadding.top + i * unitHeight})`)
+                                             .attr('transform',(d)=>`translate(${self.mainPadding.left + self.highlightWidth},${self.mainPadding.top + self.timeFilterHeight + i * unitHeight})`)
                                              .attr('width',mainPlotwidth)
                                              .attr('height',unitHeight)
                                              .attr('fill-opacity',0)
-                                             .attr('stroke','#ff9900')
+                                             .attr('stroke',self.globalHighlightColor)
                                              .attr('stroke-width',2)
                     }
                 })
@@ -404,21 +410,34 @@ export default {
 
 
             //绘制坐标轴 TODO 这个是写死的
-            for(let i = 0;i < timeList.length;i++){
+            for(let i = 0;i < timeList.length;i++){//tick
                 timeAxisPlot.append('line')
                             .attr('x1',self.mainPadding.left + self.highlightWidth + i * unitWidth + 0.5 * unitWidth)
-                            .attr('y1',self.mainPadding.top)
+                            .attr('y1',self.mainPadding.top + self.timeFilterHeight)
                             .attr('x2',self.mainPadding.left + self.highlightWidth + i * unitWidth + 0.5 * unitWidth)
-                            .attr('y2',self.mainPadding.top - 5)
+                            .attr('y2',self.mainPadding.top + self.timeFilterHeight - 5)
                             .attr('stroke','#434343')
                             .attr('stroke-width',0.5)
             }
+
+            timeFilterPlot.selectAll('*').remove()
+            for(let i = 0;i < timeList.length;i++){
+                if(!self.timeFilterFlag || self.timeFilterRange===null || (timeList[i] >= self.timeFilterRange[0] && timeList[i] <= self.timeFilterRange[1])){
+                    timeFilterPlot.append('circle')
+                                  .attr('r',self.timeFilterCircleSize)
+                                  .attr('fill',self.timeFilterCircleColor)
+                                  .attr('cx',self.mainPadding.left + self.highlightWidth + i * unitWidth + 0.5 * unitWidth)
+                                  .attr('cy',self.mainPadding.top + 0.5 * self.timeFilterHeight)
+                }
+            }
+
+
             timeAxisPlot.append('text')//起始日期文本
                         // .attr('text-anchor','middle')
                         .attr('dominant-baseline','auto')
                         // .attr('x',self.mainPadding.left + self.highlightWidth + 0.5 * unitWidth)
                         .attr('x',self.mainPadding.left + self.highlightWidth)
-                        .attr('y',self.mainPadding.top - 7)
+                        .attr('y',self.mainPadding.top + self.timeFilterHeight - 20)
                         .style('font-size',12)
                         .text(()=>{
                             function formatNumber(n){
@@ -434,14 +453,14 @@ export default {
                         .attr('dominant-baseline','auto')
                         // .attr('x',self.mainPadding.left + self.highlightWidth + timeList.length * unitWidth - 0.5 * unitWidth)
                         .attr('x',self.mainPadding.left + self.highlightWidth + (timeList.length) * unitWidth)
-                        .attr('y',self.mainPadding.top - 7)
+                        .attr('y',self.mainPadding.top + self.timeFilterHeight - 20)
                         .style('font-size',12)
                         .text(()=>{
                             function formatNumber(n){
                                 n = n.toString();
                                 return n[1] ? n: '0' + n 
                             }
-                            let date = new Date(timeList[0])
+                            let date = new Date(timeList[timeList.length-1])
                             return date.getFullYear() + '-' + formatNumber(date.getMonth()+1) + '-' + formatNumber(date.getDate()) + ' ' + formatNumber(date.getHours()) + ':' + formatNumber(date.getMinutes()) + ':' + formatNumber(date.getSeconds()) 
                         })
             

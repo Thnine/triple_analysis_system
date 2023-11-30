@@ -1,7 +1,7 @@
 <template>
     <div>
       <div class="view">
-        <svg id="svg0" width="700" height="270"></svg>
+        <svg id="svg0" width="800" height="270"></svg>
       </div>
     </div>
 </template>
@@ -304,7 +304,7 @@ export default {
       var hopColor = ["steelblue", "tomato", "#66c2a5"] //迁入 迁出 差值
       // var hopColor = ["steelblue", "tomato", "purple"] //迁入 迁出 差值
       d3.select("body").append("div").attr("class", "tip").style("display", "none")
-      var margin = { top: 50, bottom: 20, left: 100, right: 30 }
+      var margin = { top: 50, bottom: 20, left: 90, right: 10 }
       var svg = d3.select("#svg0")
       svg.select("#trans").remove()
       var g = svg
@@ -389,8 +389,6 @@ export default {
       x_axis_g.selectAll('line')
         .attr('stroke-width',2)
         .on('mouseover',(d,i)=>{
-          console.log(this.raw_time_list)
-          console.log(i)
           let messageData = {}
           messageData['时间'] = `${this.raw_time_list[i]} 至 ${this.raw_time_list[i+1]}`
           this.InfoPanel.show()//显示

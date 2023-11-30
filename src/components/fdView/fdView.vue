@@ -506,12 +506,9 @@ export default {
   /* lasso样式 */
 
   .fdView_chosen{
-    stroke: black;
+    stroke: #ff9900;
     stroke-width: 2px;
   }
-
-
-
 
   .fdView_highlight{
     stroke: rgb(95, 95, 95);
@@ -519,7 +516,7 @@ export default {
   }
 
   .fdView_global_highlight{
-    stroke: #ff9900;
+    stroke: black;
     stroke-width: 4px;
   }
   .lasso path{

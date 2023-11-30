@@ -48,6 +48,7 @@ export default {
             "#542A42",
           ],
           tickSize:12,//两侧时间文本的大小
+          globalHighlightColor:'black',//全局高亮的颜色
           
 
           /**
@@ -61,6 +62,7 @@ export default {
 
           //全局搜索高亮
           globalSearchIds:[],//全局搜索列表中的Id
+          
           drawGlobalSearchIdsHighLight:()=>{return;},//高亮全局搜索节点的Id的bar
 
         }
@@ -96,10 +98,6 @@ export default {
                 self.attr_keys.push(key)
               }
             }
-            // //color
-            // for(let i = 0;i < self.attr_keys.length;i++){
-            //   self.colorList.push(d3.interpolateRainbow(1.0 * i / self.attr_keys.length))
-            // }
             //抽取时间
             let timeSet = new Set();//提取时间
             for(let v of self.rawData){
@@ -174,23 +172,25 @@ export default {
               yPosData[attr] = self.timeSortedArray.map(v=>[0,0])//第一项是上边缘y坐标，第二项是下边缘y坐标
             }
             for(let i = 0;i < self.timeSortedArray.length;i++){
-              let sortedList = self.attr_keys.map(v=>{
-                return {
-                  'type':v,
-                  'size':self.drawData[v][i],
+                let sortedList = self.attr_keys.map(v=>{
+                  return {
+                    'type':v,
+                    'size':self.drawData[v][i],
+                  }
+                }).sort((a,b)=>b.size-a.size)
+                // let gap = (height - sizeByTime[i] * unitLength) / self.attr_keys.length;
+                // //按顺序
+                // let accmLength = gap;//累计长度
+                // for(let v of sortedList){//沿y轴自上而下遍历
+                //   yPosData[v.type][i] = [accmLength,accmLength + v.size * unitLength]
+                //   accmLength += (v.size * unitLength + gap)
+                // }
+                let accmLength = (height - sizeByTime[i] * unitLength);//累计长度
+                for(let v of sortedList){//沿y轴自上而下遍历
+                  yPosData[v.type][i] = [accmLength,accmLength + v.size * unitLength]
+                  accmLength += (v.size * unitLength)
                 }
-              }).sort((a,b)=>b.size-a.size)
-              let gap = (height - sizeByTime[i] * unitLength) / self.attr_keys.length;
 
-              //按顺序
-              let accmLength = gap;//累计长度
-
-              for(let v of sortedList){//沿y轴自上而下遍历
-                yPosData[v.type][i] = [accmLength,accmLength + v.size * unitLength]
-                accmLength += (v.size * unitLength + gap)
-              }
-
-              
             }
 
             //比例尺（仅根据width，不考虑padding）
@@ -288,7 +288,7 @@ export default {
                              .data(highlightData)
                              .enter()
                              .append('line')
-                             .attr('stroke','#ff9900')
+                             .attr('stroke',self.globalHighlightColor)
                              .attr('stroke-width',4) 
                              .attr('x1',(d)=>self.padding.left + xScale(self.timeSortedArray[d.time_index]))
                              .attr('y1',(d)=>self.padding.top + yPosData[d.type][d.time_index][0])
@@ -302,20 +302,38 @@ export default {
 
 
             //刷选时间交互
-            const brushPlot = svg.append('g')
+            const uppperPlot = svg.append('g')
             const brush = d3.brushX()
                             .extent([[self.padding.left,self.padding.top],[self.padding.left + width,self.padding.top + height]])
                             .on("brush",()=>{
                                 
-                                // let brushLeft = d3.event.selection[0] - self.padding.left
-                                // let brushRight = d3.event.selection[1] - self.padding.left
-                                // let leftTimeStamp = xScale.invert(brushLeft)
-                                // let rightTimeStamp = xScale.invert(brushRight)
-                                // self.InfoPanel.show()
-                                // let messageData = 
+                                let brushLeft = d3.event.selection[0] - self.padding.left
+                                let brushRight = d3.event.selection[1] - self.padding.left
+                                let leftTimeStamp = xScale.invert(brushLeft)
+                                let rightTimeStamp = xScale.invert(brushRight)
+
+                                function getFormatDate(timestamp){ //获取timestamp的格式化字符串
+                                  function formatNumber(n){
+                                      n = n.toString();
+                                      return n[1] ? n: '0' + n 
+                                  }
+                                  let date = new Date(timestamp)
+                                  return date.getFullYear() + '-' + formatNumber(date.getMonth()+1) + '-' + formatNumber(date.getDate()) + ' ' + formatNumber(date.getHours()) + ':' + formatNumber(date.getMinutes()) + ':' + formatNumber(date.getSeconds()) 
+                                }
+                                let messageData = {}
+                                messageData['刷选范围'] = `${getFormatDate(leftTimeStamp)} 至 ${getFormatDate(rightTimeStamp)}`
+
+                                self.InfoPanel.show()
+                                self.InfoPanel.setMessageData(messageData);//更新信息
+                                /**
+                                 * 更新位置
+                                 */
+                                self.InfoPanel.setPos(d3.event.sourceEvent.clientY + 10,d3.event.sourceEvent.clientX + 10)
+
+
                             })
                             .on("end",()=>{
-                                self.InfoPanel.hidden()
+                                self.InfoPanel.hidden();
                                 if(d3.event.selection === null){
                                   this.exportBrushTimeRange(null)
                                 }
@@ -329,11 +347,11 @@ export default {
 
                               
                             })
-            brushPlot.call(brush)
+            uppperPlot.call(brush)
 
 
             for(let attr of self.attr_keys){//绘制bar
-              brushPlot.append('g')
+              uppperPlot.append('g')
                  .selectAll('*')
                  .data(yPosData[attr])
                  .enter()
@@ -366,6 +384,12 @@ export default {
                     self.InfoPanel.hidden()//隐藏
                  })
             }
+
+            //改变brush层级
+            uppperPlot.select('.selection').raise()
+            uppperPlot.select('.handle--e').raise()
+            uppperPlot.select('.handle--w').raise()
+
 
 
         },

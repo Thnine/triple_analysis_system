@@ -896,8 +896,8 @@ export default {
 }
 
 /deep/ .radviz-global-highlight{
-    stroke: #ff9900;
-    stroke-width: 4px;
+    stroke: black;
+    stroke-width: 2px;
 }
 
 
